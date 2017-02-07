@@ -1,3 +1,48 @@
+/*
+N = pick string
+   - block laser beam -> plays tone
+   - unblock laser beam -> do nothing
+
+len=release tab
+   - stop tone playing
+
+stop all tones button
+   - stop all tones
+
+/ = slide up
+   - needs to be tabbed with two finger next to each other and slide
+   - pitch of tone changes when following change on tabs is detected
+     - t1 is pressed > t1+t2 is pressed > t2 is pressed
+       where t1 can be > or < t2 with max distance 1
+
+\ = slide down
+   - see slide up
+
+h = hammer-on
+   - if more far tab is pressed and closer (max 4 tabs away) tab is pressed and depressed -> new tone is played
+     - if tone was played -> play new tone louder
+     - if tone did not play -> play new tone relativeli quiet
+
+p = pull-off
+   - not supported due to gesture not possible
+
+~ = vibrato
+   - using long lever
+   
++ = harmonic
+   - no need to suppot it yet
+   
+x = Dead note
+   - disabled in chord library
+   
+b = Bend
+   - using long vibrato lever
+pb = Pre-bend
+br = Bend release
+pbr = Pre-bend release
+brb = Bend release bend
+*/
+
 int fret_pins[12] = {22,23,24,25,26,27,28,29,30,31,32,33};
 int string_pins[6]= {36,37,38,39,40,41};
 int laser_pins[6] = {46,47,48,49,50,51};
