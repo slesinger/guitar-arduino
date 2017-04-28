@@ -32,7 +32,7 @@ typedef struct
 #define VEL_TIME_MAX 25000
 #define VELOCITY_MAX 127
 #define VELOCITY_MIN 80
-#define EFFECT_THOLD_MS 1000 //[ms] how often to effect setting
+#define EFFECT_THOLD_MS 5000 //[ms] how often to effect setting
 #define VIBRATO_THOLD_MS 5 //[ms] how often send vibrato events, real event sent only if not 0
 //#define DBG 1
 #define DBG2 1
@@ -51,6 +51,7 @@ int fret_status_last_f = UNDEF;
 int fret_status_last_used = UNDEF;
 unsigned long fret_status_last_f_us = 0;
 int fret_status_last_s = UNDEF;
+uint8_t preset = 0x19;
 
 byte laser_status[6];
 unsigned long laser_status_last_update_us[6];
@@ -118,9 +119,6 @@ inline void send_fret_sliding_event(int dir, int f) {
   Serial.println(pitch);
 #endif
 
-  midiEventPacket_t packet = {0x0E, 0xE0 | 0, 0, pitch};  //channel, receiver sensitivity, velocity
-  MidiUSB.sendMIDI(packet);
-  MidiUSB.flush();
 }
 
 
@@ -151,6 +149,14 @@ inline void send_fret_event(boolean pressed, int s, int f) {
     fret_status_last_f = UNDEF;
     fret_status_last_s = UNDEF;
   }
+
+  //midi fake controller for debuging
+  midiEventPacket_t packet = {0x0B, 0xB0, 0x50, s};
+  MidiUSB.sendMIDI(packet);
+  packet = {0x0B, 0xB0, 0x51, f};
+  MidiUSB.sendMIDI(packet);
+  MidiUSB.flush();
+
 }
 
 
@@ -230,43 +236,57 @@ inline void send_emphasis_event(boolean emphasis_blocked) {
 }
 
 inline void send_stop_tone_event(boolean stop_pressed) {
-#ifdef DBG
-  if (stop_pressed)
-    Serial.println("S");
-  else
-    Serial.println("s");
-#endif
-
-  if (stop_pressed) {
 
     //find if special function is pressed
-    uint8_t program = -1;
     if ((fret_status[0][5] == true)) {
-      program = 0x19;
-    }
-    if ((fret_status[1][5] == true)) {
-      program = 0x1B;
-    }
-
-    //noteOff for all lasers
-    if (program != -1) {
-      midiEventPacket_t special = {0x0C, 0xC0 | 0, program, 0};  //channel, pitch, velocity
+      preset = 0x19;
+      midiEventPacket_t special = {0x0C, 0xC0, preset, 0};  //channel, pitch, velocity
       MidiUSB.sendMIDI(special);
       MidiUSB.flush();
     }
+    if ((fret_status[1][5] == true)) {
+      preset = 0x1B;
+      midiEventPacket_t special = {0x0C, 0xC0, preset, 0};  //channel, pitch, velocity
+      MidiUSB.sendMIDI(special);
+      MidiUSB.flush();
+    }
+    if ((fret_status[2][5] == true)) {
+      midiEventPacket_t special = {0x0C, 0xC0, preset++, 0};  //channel, pitch, velocity
+      MidiUSB.sendMIDI(special);
+      MidiUSB.flush();
+    }
+    if ((fret_status[3][5] == true)) {
+      midiEventPacket_t special = {0x0C, 0xC0, preset--, 0};  //channel, pitch, velocity
+      MidiUSB.sendMIDI(special);
+      MidiUSB.flush();
+    }
+
+  if (stop_pressed) {
+
+    //noteOff for all lasers
     midiEventPacket_t packet = {0x0B, 0xB0 | 0, 120, 0};  //channel, pitch, velocity
     MidiUSB.sendMIDI(packet);
     MidiUSB.flush();
   }
 }
 
+//val <0; 1023>
 inline void send_vibrato_event(int val) {
   //300-360    0
   //<300-0     -
   //>360-1023  +
-  int val2 = map(val, -1024, 1024, 0, 32768);
-  uint8_t val_lsb = val2 && 0xFF;
-  uint8_t val_msb = val2 >> 8;
+
+  unsigned int val2 = 0;
+  if (val < 300) {
+    val2 = map(val, 0, 300,  8192-4096, 8192);
+  }
+  else if (val > 400) {
+    val2 = map(val, 400, 1024, 8192, 8192+4096);
+  }
+  else return;  //ignore center position
+
+  uint8_t val_lsb = val2 & 0x7F;
+  uint8_t val_msb = val2 >> 7;
   midiEventPacket_t packet = {0x0E, 0xE0 | 0, val_lsb, val_msb};
   MidiUSB.sendMIDI(packet);
   MidiUSB.flush();
