@@ -4,6 +4,8 @@
 #include "chords.h"
 #include "profile_default.h"
 #include "MIDIUSB.h" //https://github.com/arduino-libraries/MIDIUSB
+#include "SPI.h"
+#include "PCD8544_SPI.h"
 
 //profiles -> profile (which accords are mapped to fret fields) -> accord (definition of notes)
 /*
@@ -19,6 +21,8 @@ typedef struct
 //MIDI reference https://users.cs.cf.ac.uk/Dave.Marshall/Multimedia/node155.html
 //MIDI reference http://www.gweep.net/~prefect/eng/reference/protocol/midispec.html#Off
 //MIDI message specs https://www.midi.org/specifications/item/table-1-summary-of-midi-message
+
+PCD8544_SPI_FB lcd;
 
 
 #define LASER_ANALOG_TH 900 //for analog read of bpw34. 900-1023 means laser is blocked, 0-600 means laser hit diode
@@ -393,6 +397,10 @@ void setup()
 #endif
 
   init_default_profile();
+
+  lcd.begin();
+  lcd.print(F("Slesinger"));
+  lcd.renderAll();
 
   //zero fret_status and set frets as source of 3.3V (in scan mode)
   for (int f = 0; f <= 12; f++) {
