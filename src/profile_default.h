@@ -5,19 +5,24 @@
 uint8_t *default_profile[6][13];
 
 void init_default_profile() {
-  default_profile[0][0]  = acc_C;
-  default_profile[0][1]  = acc_Cis;
-  default_profile[0][2]  = acc_D;
-  default_profile[0][3] = acc_Dis;
-  default_profile[0][4] = acc_E;
-  default_profile[0][5]  = acc_F;
-  default_profile[0][6]  = acc_Fis;
-  default_profile[0][7]  = acc_G;
-  default_profile[0][8]  = acc_Gis;
-  default_profile[0][9]  = acc_A;
-  default_profile[0][10]  = acc_AisB;
-  default_profile[0][11]  = acc_H;
-  default_profile[0][12]  = acc_C2;
+
+  //no string pressed
+  default_profile[UNDEF][UNDEF] = acc_zero;
+
+  //vybrnkavaci struna
+  default_profile[0][0]  = acc_F_tone;
+  default_profile[0][1]  = acc_Fis_tone;
+  default_profile[0][2]  = acc_G_tone;
+  default_profile[0][3]  = acc_Gis_tone;
+  default_profile[0][4]  = acc_A_tone;
+  default_profile[0][5]  = acc_AisB_tone;
+  default_profile[0][6]  = acc_H_tone;
+  default_profile[0][7]  = acc_C_tone;
+  default_profile[0][8]  = acc_Cis_tone;
+  default_profile[0][9]  = acc_D_tone;
+  default_profile[0][10] = acc_Dis_tone;
+  default_profile[0][11] = acc_E_tone;
+  default_profile[0][12] = acc_Eis_tone;
 
   default_profile[1][0]  = acc_Czm;
   default_profile[1][1]  = acc_EsDur;
@@ -31,6 +36,7 @@ void init_default_profile() {
   default_profile[1][9]  = acc_Hdur;
   default_profile[1][10] = acc_FisDur;
   default_profile[1][11] = acc_CisDur;
+  default_profile[1][12] = acc_CisDur;
 
   default_profile[2][0]  = acc_CisZm;
   default_profile[2][1]  = acc_Czv;
@@ -44,21 +50,50 @@ void init_default_profile() {
   default_profile[2][9]  = acc_H7;
   default_profile[2][10] = acc_Fmoll;
   default_profile[2][11] = acc_Cis7;
+  default_profile[2][12] = acc_Cis7;
 
-  default_profile[3][0]  = acc_Dzm;
-  default_profile[3][1]  = acc_Cmoll;
-  default_profile[3][2]  = acc_Gmoll;
-  default_profile[3][3]  = acc_Dmoll;
-  default_profile[3][4]  = acc_Amoll;
-  default_profile[3][5]  = acc_Emoll;
-  default_profile[3][6]  = acc_Hmoll;
-  default_profile[3][7]  = acc_FisMoll;
-  default_profile[3][8]  = acc_CisMoll;
-  default_profile[3][9]  = acc_CisZv;
-  default_profile[3][10] = acc_Dzv;
-  default_profile[3][11] = acc_DisZv;
+  default_profile[3][0]  = acc_CisZm;
+  default_profile[3][1]  = acc_Czv;
+  default_profile[3][2]  = acc_B5;
+  default_profile[3][3]  = acc_F5;
+  default_profile[3][4]  = acc_C5;
+  default_profile[3][5]  = acc_G5;
+  default_profile[3][6]  = acc_D5;
+  default_profile[3][7]  = acc_A5;
+  default_profile[3][8]  = acc_E5;
+  default_profile[3][9]  = acc_H5;
+  default_profile[3][10] = acc_Fmoll;
+  default_profile[3][11] = acc_Cis5;
+  default_profile[3][12] = acc_Cis5;
 
-  default_profile[UNDEF][UNDEF] = acc_zero;  
+  default_profile[4][0]  = acc_Dzm;
+  default_profile[4][1]  = acc_Cmoll;
+  default_profile[4][2]  = acc_Gmoll;
+  default_profile[4][3]  = acc_Dmoll;
+  default_profile[4][4]  = acc_Amoll;
+  default_profile[4][5]  = acc_Emoll;
+  default_profile[4][6]  = acc_Hmoll;
+  default_profile[4][7]  = acc_FisMoll;
+  default_profile[4][8]  = acc_CisMoll;
+  default_profile[4][9]  = acc_CisZv;
+  default_profile[4][10] = acc_Dzv;
+  default_profile[4][11] = acc_DisZv;
+  default_profile[4][12] = acc_DisZv;
+
+  default_profile[5][0]  = acc_Dzm;
+  default_profile[5][1]  = acc_Cmoll;
+  default_profile[5][2]  = acc_Gmoll;
+  default_profile[5][3]  = acc_Dmoll;
+  default_profile[5][4]  = acc_Amoll;
+  default_profile[5][5]  = acc_Emoll;
+  default_profile[5][6]  = acc_Hmoll;
+  default_profile[5][7]  = acc_FisMoll;
+  default_profile[5][8]  = acc_CisMoll;
+  default_profile[5][9]  = acc_CisZv;
+  default_profile[5][10] = acc_Dzv;
+  default_profile[5][11] = acc_DisZv;
+  default_profile[5][12] = acc_DisZv;
+
 }
 
 #endif
