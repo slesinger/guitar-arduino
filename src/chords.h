@@ -19,7 +19,7 @@ uint8_t acc_Cis_tone[6] = {61,66,71,76,80,85};
 uint8_t acc_D_tone[6]   = {62,67,72,77,81,86};
 uint8_t acc_Dis_tone[6] = {63,68,73,78,82,87};
 uint8_t acc_E_tone[6]   = {64,69,74,79,83,88};
-uint8_t acc_Eis_tone[6] = {65,70,75,80,84,89};
+uint8_t acc_F2_tone[6]  = {65,70,75,80,84,89};
 
 uint8_t acc_Czm[6]     = {0 ,57,63,69,72,78};
 uint8_t acc_EsDur[6]   = {0 ,63,67,70,75,79};

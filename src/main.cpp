@@ -58,6 +58,7 @@ int fret_status_last_s = UNDEF;
 uint8_t preset = 0x19;
 
 byte laser_status[6];
+uint8_t played_notes[6] = {60,60,60,60,60,60};
 unsigned long laser_status_last_update_us[6];
 boolean last_alaser_status[7]; //needed just for analog read, including emphasis
 long effect_last_update_ms = 0;
@@ -219,6 +220,11 @@ inline void send_laser_event(boolean laser_blocked, int l_idx) {
     //noteOn
     uint8_t note = get_note(l_idx);
     if (note != 0) {
+      midiEventPacket_t packet0 = {0x08, 0x80 | 0, played_notes[l_idx], 0};  //note off last played note
+      MidiUSB.sendMIDI(packet0);
+      MidiUSB.flush();
+      delay(1); //next midi command gets omitted if delay is not present
+      played_notes[l_idx] = note;
       midiEventPacket_t packet = {0x09, 0x90 | 0, note, velocity};  //channel, pitch, velocity
       MidiUSB.sendMIDI(packet);
       MidiUSB.flush();
@@ -446,20 +452,28 @@ void setup()
 //-------------------------
 void loop()
 {
+  bool narazil_na_prst = false;
   //scan fret by fret
   for (int f = 0; f <= 12; f++) { //f<=12
 
     set_fret(f);
     //scan strings for this fret
-    for (int s = 0; s <= 5; s++) {
+    for (int s = 5; s >= 0; s--) {
       boolean pressed = is_string_pressed_on_active_fret(s);
       //emit event if status changed
       if (pressed ^ fret_status[f][s]) {
         send_fret_event(pressed, s, f);
         fret_status[f][s] = pressed;
       }
+      if (pressed == true) {
+        narazil_na_prst = true;
+        break;
+      }
     }
     unset_fret(f);
+    if (narazil_na_prst == true) {
+        break;
+    }
   }
 
 

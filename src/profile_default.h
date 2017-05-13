@@ -22,7 +22,7 @@ void init_default_profile() {
   default_profile[0][9]  = acc_D_tone;
   default_profile[0][10] = acc_Dis_tone;
   default_profile[0][11] = acc_E_tone;
-  default_profile[0][12] = acc_Eis_tone;
+  default_profile[0][12] = acc_F2_tone;
 
   default_profile[1][0]  = acc_Czm;
   default_profile[1][1]  = acc_EsDur;
