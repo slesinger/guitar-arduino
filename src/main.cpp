@@ -136,14 +136,15 @@ inline void send_fret_event(boolean pressed, int s, int f) {
   Serial.println(f * 10 + s);
 #endif
 
-  unsigned long diff_us = micros() - fret_status_last_f_us;
 
+/*
   //check for sliding
+  unsigned long diff_us = micros() - fret_status_last_f_us;
   int dir = f - fret_status_last_used; //0: no sliding, -1:sliding outward: 1: sliding inward
   if (diff_us < FRET_SLIDING_THOLD) {
     send_fret_sliding_event(dir, f);
   }
-
+*/
   fret_status_last_used = f;
   //set status
   if (pressed) {
@@ -154,14 +155,14 @@ inline void send_fret_event(boolean pressed, int s, int f) {
     fret_status_last_f = UNDEF;
     fret_status_last_s = UNDEF;
   }
-
+/*
   //midi fake controller for debuging
   midiEventPacket_t packet = {0x0B, 0xB0, 0x50, s};
   MidiUSB.sendMIDI(packet);
   packet = {0x0B, 0xB0, 0x51, f};
   MidiUSB.sendMIDI(packet);
   MidiUSB.flush();
-
+*/
 }
 
 
@@ -223,7 +224,7 @@ inline void send_laser_event(boolean laser_blocked, int l_idx) {
       midiEventPacket_t packet0 = {0x08, 0x80 | 0, played_notes[l_idx], 0};  //note off last played note
       MidiUSB.sendMIDI(packet0);
       MidiUSB.flush();
-      delay(1); //next midi command gets omitted if delay is not present
+      delay(2); //next midi command gets omitted if delay is not present, because midiusb is ignoring the fact, just change it
       played_notes[l_idx] = note;
       midiEventPacket_t packet = {0x09, 0x90 | 0, note, velocity};  //channel, pitch, velocity
       MidiUSB.sendMIDI(packet);
