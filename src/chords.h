@@ -70,5 +70,10 @@ uint8_t acc_CisZv[6]   = {0 ,57,65,69,73,77};
 uint8_t acc_Dzv[6]     = {0 ,0 ,66,70,74,78};
 uint8_t acc_DisZv[6]   = {0 ,0, 67,71,75,79};
 
+//Million years ago
+//uint8_t acc_zero[6   = {52,57,62,67,71,76};
+uint8_t acc_CShMin[6]  = {53,58,65,70,72,77};
+uint8_t acc_FShMin[6]  = {0 ,57,66,69,73,78};
+uint8_t acc_GShMin7[6] = {53,60,63,68,72,77};
 
 #endif
