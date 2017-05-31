@@ -24,6 +24,7 @@ void init_default_profile() {
   default_profile[0][11] = acc_E_tone;
   default_profile[0][12] = acc_F2_tone;
 
+  //durova
   default_profile[1][0]  = acc_Czm;
   default_profile[1][1]  = acc_EsDur;
   default_profile[1][2]  = acc_Bdur;
@@ -38,6 +39,7 @@ void init_default_profile() {
   default_profile[1][11] = acc_CisDur;
   default_profile[1][12] = acc_CisDur;
 
+  //sedmickova
   default_profile[2][0]  = acc_CisZm;
   default_profile[2][1]  = acc_Czv;
   default_profile[2][2]  = acc_B7;
@@ -52,6 +54,7 @@ void init_default_profile() {
   default_profile[2][11] = acc_Cis7;
   default_profile[2][12] = acc_Cis7;
 
+  //petkova
   default_profile[3][0]  = acc_CisZm;
   default_profile[3][1]  = acc_Czv;
   default_profile[3][2]  = acc_B5;
@@ -66,6 +69,7 @@ void init_default_profile() {
   default_profile[3][11] = acc_Cis5;
   default_profile[3][12] = acc_Cis5;
 
+  //custom
   default_profile[4][0]  = acc_Dzm;
   default_profile[4][1]  = acc_Cmoll;
   default_profile[4][2]  = acc_Gmoll;
@@ -73,13 +77,14 @@ void init_default_profile() {
   default_profile[4][4]  = acc_Amoll;
   default_profile[4][5]  = acc_Emoll;
   default_profile[4][6]  = acc_Hmoll;
-  default_profile[4][7]  = acc_FisMoll;
-  default_profile[4][8]  = acc_CisMoll;
-  default_profile[4][9]  = acc_CisZv;
+  default_profile[4][7]  = acc_FShMin;
+  default_profile[4][8]  = acc_CShMin;
+  default_profile[4][9]  = acc_GShMin7;
   default_profile[4][10] = acc_Dzv;
   default_profile[4][11] = acc_DisZv;
   default_profile[4][12] = acc_DisZv;
-
+  
+  //molova
   default_profile[5][0]  = acc_Dzm;
   default_profile[5][1]  = acc_Cmoll;
   default_profile[5][2]  = acc_Gmoll;
