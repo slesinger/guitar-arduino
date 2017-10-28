@@ -2,7 +2,7 @@
 #define CHORDS_H
 
 #include <Arduino.h>
-#incude "guitar_v2.h"
+#include "guitar_v2.h"
 //                         E  A  D  G  B  Ehi
 //uint8_t acc_zero[6]   = {52,57,62,67,71,76};
 uint8_t capo[8][6]      ={{52,57,62,67,71,76},

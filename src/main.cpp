@@ -73,7 +73,7 @@ unsigned long emphasis_status_last_update_us = 0;
 unsigned long emphasis_last_blocked_us = 0;
 
 uint8_t velocity = DEFAULT_VELOCITY;
-
+uint8_t selected_capo_id = 0;
 
 inline void set_fret(int f_idx) {
   digitalWrite(fret_pins[f_idx], HIGH);
@@ -260,7 +260,7 @@ inline void send_emphasis_event(boolean emphasis_blocked) {
 inline void send_stop_tone_event(boolean stop_pressed) {
 
     //find if instrument selection is pressed (top string), fret selects instrument
-    for (int i = 0; i < 13) {
+    for (int i = 0; i < 13; i++) {
       if ((fret_status[i][5] == true)) {
         midiEventPacket_t special = {0x0C, 0xC0, instruments[i], 0};
         MidiUSB.sendMIDI(special);
@@ -275,7 +275,7 @@ inline void send_stop_tone_event(boolean stop_pressed) {
     }
 
     //find if capo selection is requested (5th string), max 8th fret, 9-13 fret means remove capo
-    for (int i = 0; i < 13) {
+    for (int i = 0; i < 13; i++) {
       if ((fret_status[i][4] == true)) {
         if (i < 8) {
           selected_capo_id = i;

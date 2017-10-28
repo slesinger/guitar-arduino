@@ -7,7 +7,7 @@ uint8_t *default_profile[6][13];
 void init_default_profile() {
 
   //no string pressed
-  default_profile[UNDEF][UNDEF] = acc_zero;
+  default_profile[UNDEF][UNDEF] = capo[0];
 
   //vybrnkavaci struna
   default_profile[0][0]  = acc_F_tone;
