@@ -4,7 +4,8 @@
 #include <Arduino.h>
 #include "guitar_v2.h"
 //                         E  A  D  G  B  Ehi
-//uint8_t acc_zero[6]   = {52,57,62,67,71,76};
+uint8_t acc_zero[6]     = {XX,XX,XX,XX,XX,XX};
+
 uint8_t capo[8][6]      ={{52,57,62,67,71,76},
                           {53,58,63,68,72,77},
                           {54,59,64,69,73,78},

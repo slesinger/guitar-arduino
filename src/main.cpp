@@ -43,7 +43,7 @@ PCD8544_SPI_FB lcd;
 #define EFFECT_THOLD_MS 5000 //[ms] how often to effect setting
 #define VIBRATO_THOLD_MS 5 //[ms] how often send vibrato events, real event sent only if not 0
 //#define DBG 1
-#define DBG2 1
+//#define DBG2 1
 
 int fret_pins[13] = {47,43,25,41,27,23,35,37,45,29,31,33,39};
 int string_pins[6]= {32,30,28,26,24,22};
@@ -91,10 +91,10 @@ uint8_t get_note(int l_idx) {
   //accord is of type uint8_t[6]
   uint8_t *accord = default_profile[fret_status_last_s][fret_status_last_f];
   uint8_t note = *(accord + l_idx);
+  uint8_t capo_note = capo[selected_capo_id][l_idx];
   //calculate capo
-  if (note == XX) {
-    //play default note on selected capo
-    note = capo[selected_capo_id][l_idx] + TUNING;
+  if ( (note == XX) || (note < capo_note) ) {
+    note = capo_note + TUNING;
   }
   else {
     note = note + TUNING; //note not affected by capo, just proceed
@@ -265,33 +265,13 @@ inline void send_stop_tone_event(boolean stop_pressed) {
         midiEventPacket_t special = {0x0C, 0xC0, instruments[i], 0};
         MidiUSB.sendMIDI(special);
         MidiUSB.flush();
-
-        //play sample note C
-        delay(2);
-        midiEventPacket_t packet = {0x09, 0x90 | 0, 72, 90};  //channel, pitch, velocity
-        MidiUSB.sendMIDI(packet);
-        MidiUSB.flush();
       }
     }
 
-    //find if capo selection is requested (5th string), max 8th fret, 9-13 fret means remove capo
+    //find if capo selection is requested (bottom string), max 8th fret, 9-13 fret means remove capo
     for (int i = 0; i < 13; i++) {
-      if ((fret_status[i][4] == true)) {
-        if (i < 8) {
-          selected_capo_id = i;
-          for (int c = 0; c <= i; c++) {  //play as many times as is number of selected capo fret
-            delay(100);
-            midiEventPacket_t packet = {0x09, 0x90 | 0, 60, 80};  //channel, pitch, velocity
-            MidiUSB.sendMIDI(packet);
-            MidiUSB.flush();
-          }
-        }
-        else {
-          selected_capo_id = 0; //low tone indicated removal of capo
-          midiEventPacket_t packet = {0x09, 0x90 | 0, 50, 80};  //channel, pitch, velocity
-          MidiUSB.sendMIDI(packet);
-          MidiUSB.flush();
-        }
+      if ((fret_status[i][0] == true)) {
+        selected_capo_id = (i < 8) ? i + 1 : 0;  //frets 9 and more removes capo
       }
     }
 
