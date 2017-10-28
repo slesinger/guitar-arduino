@@ -34,12 +34,12 @@ PCD8544_SPI_FB lcd;
 #define LASER_THOLD 1000 //[us]
 #define STOP_THOLD 500000 //[us]
 #define FRET_SLIDING_THOLD 500000 //[us]
-#define DEFAULT_VELOCITY 96
 #define VEL_TIME_OUT_OF_RANGE 200000 //[us]
 #define VEL_TIME_MIN 6000
 #define VEL_TIME_MAX 25000
 #define VELOCITY_MAX 127
-#define VELOCITY_MIN 80
+#define DEFAULT_VELOCITY 84 //bylo 96 ale byl to maly rozdil
+#define VELOCITY_MIN 74 //bylo 80
 #define EFFECT_THOLD_MS 5000 //[ms] how often to effect setting
 #define VIBRATO_THOLD_MS 5 //[ms] how often send vibrato events, real event sent only if not 0
 //#define DBG 1
@@ -59,7 +59,6 @@ int fret_status_last_f = UNDEF;
 int fret_status_last_used = UNDEF;
 unsigned long fret_status_last_f_us = 0;
 int fret_status_last_s = UNDEF;
-uint8_t preset = 0x19;
 
 byte laser_status[6];
 uint8_t played_notes[6] = {60,60,60,60,60,60};
@@ -91,7 +90,15 @@ uint8_t get_note(int l_idx) {
   //TODO switch to profile pointer to allow profile switching
   //accord is of type uint8_t[6]
   uint8_t *accord = default_profile[fret_status_last_s][fret_status_last_f];
-  uint8_t note = *(accord + l_idx) + TUNING;
+  uint8_t note = *(accord + l_idx);
+  //calculate capo
+  if (note == XX) {
+    //play default note on selected capo
+    note = capo[selected_capo_id][l_idx] + TUNING;
+  }
+  else {
+    note = note + TUNING; //note not affected by capo, just proceed
+  }
 #ifdef DBG
   Serial.print(fret_status_last_s);
   Serial.print("n");
@@ -204,23 +211,23 @@ inline void send_laser_event(boolean laser_blocked, int l_idx) {
           }
         }
       }
-#ifdef DBG
-  Serial.print(diff_us);
-  Serial.print(">");
-  Serial.println(velocity);
-#endif
+      #ifdef DBG
+        Serial.print(diff_us);
+        Serial.print(">");
+        Serial.println(velocity);
+      #endif
     }
     else {  //for other laser check if time difference is out of range
       unsigned long diff_us = micros() - emphasis_last_blocked_us;
       if ( (diff_us < 0) || (diff_us > VEL_TIME_OUT_OF_RANGE) ) {
         velocity = DEFAULT_VELOCITY;
-#ifdef DBG
-  Serial.print(diff_us);
-  Serial.print("]");
-  Serial.println(velocity);
-#endif
+        #ifdef DBG
+          Serial.print(diff_us);
+          Serial.print("]");
+          Serial.println(velocity);
+        #endif
       }
-    }
+    } //end of calculate velocity
 
     //noteOn
     uint8_t note = get_note(l_idx);
@@ -252,32 +259,43 @@ inline void send_emphasis_event(boolean emphasis_blocked) {
 
 inline void send_stop_tone_event(boolean stop_pressed) {
 
-    //find if special function is pressed
-    if ((fret_status[0][5] == true)) {
-      preset = 0x00;
-      midiEventPacket_t special = {0x0C, 0xC0, preset, 0};  //channel, pitch, velocity
-      MidiUSB.sendMIDI(special);
-      MidiUSB.flush();
+    //find if instrument selection is pressed (top string), fret selects instrument
+    for (int i = 0; i < 13) {
+      if ((fret_status[i][5] == true)) {
+        midiEventPacket_t special = {0x0C, 0xC0, instruments[i], 0};
+        MidiUSB.sendMIDI(special);
+        MidiUSB.flush();
+
+        //play sample note C
+        delay(2);
+        midiEventPacket_t packet = {0x09, 0x90 | 0, 72, 90};  //channel, pitch, velocity
+        MidiUSB.sendMIDI(packet);
+        MidiUSB.flush();
+      }
     }
-    if ((fret_status[1][5] == true)) {
-      preset = 0x08;
-      midiEventPacket_t special = {0x0C, 0xC0, preset, 0};  //channel, pitch, velocity
-      MidiUSB.sendMIDI(special);
-      MidiUSB.flush();
-    }
-    if ((fret_status[2][5] == true)) {
-      midiEventPacket_t special = {0x0C, 0xC0, preset++, 0};  //channel, pitch, velocity
-      MidiUSB.sendMIDI(special);
-      MidiUSB.flush();
-    }
-    if ((fret_status[3][5] == true)) {
-      midiEventPacket_t special = {0x0C, 0xC0, preset--, 0};  //channel, pitch, velocity
-      MidiUSB.sendMIDI(special);
-      MidiUSB.flush();
+
+    //find if capo selection is requested (5th string), max 8th fret, 9-13 fret means remove capo
+    for (int i = 0; i < 13) {
+      if ((fret_status[i][4] == true)) {
+        if (i < 8) {
+          selected_capo_id = i;
+          for (int c = 0; c <= i; c++) {  //play as many times as is number of selected capo fret
+            delay(100);
+            midiEventPacket_t packet = {0x09, 0x90 | 0, 60, 80};  //channel, pitch, velocity
+            MidiUSB.sendMIDI(packet);
+            MidiUSB.flush();
+          }
+        }
+        else {
+          selected_capo_id = 0; //low tone indicated removal of capo
+          midiEventPacket_t packet = {0x09, 0x90 | 0, 50, 80};  //channel, pitch, velocity
+          MidiUSB.sendMIDI(packet);
+          MidiUSB.flush();
+        }
+      }
     }
 
   if (stop_pressed) {
-
     //noteOff for all lasers
     midiEventPacket_t packet = {0x0B, 0xB0 | 0, 120, 0};  //channel, pitch, velocity
     MidiUSB.sendMIDI(packet);
@@ -345,7 +363,7 @@ inline void laser_common_analog(int l_idx, boolean laser_blocked) {
 
       laser_status[l_idx] = laser_blocked;
       laser_status_last_update_us[l_idx] = us;
-      send_laser_event((boolean)laser_blocked,  l_idx);
+      send_laser_event((boolean)laser_blocked, l_idx);
     } //else ignore, change was due to jitter, likely
 
   }
@@ -491,6 +509,7 @@ void loop()
     laseremphasis_analog(blocked);
   }
 
+  //read lasers
   for (int i = 0; i < 6; i++) {
     boolean blocked = false;
     if (analogRead(laser_pins[i]) > LASER_ANALOG_TH)
