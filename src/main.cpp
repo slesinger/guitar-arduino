@@ -24,6 +24,10 @@ typedef struct
 
 PCD8544_SPI_FB lcd;
 
+//guitarpack.sf2 has tuning -12
+//accounsting.sf2 has 0
+#define TUNING -12
+
 
 #define LASER_ANALOG_TH 900 //for analog read of bpw34. 900-1023 means laser is blocked, 0-600 means laser hit diode
 #define LASER_ANALOG_THOLD_US 5000 //[us]
@@ -87,7 +91,7 @@ uint8_t get_note(int l_idx) {
   //TODO switch to profile pointer to allow profile switching
   //accord is of type uint8_t[6]
   uint8_t *accord = default_profile[fret_status_last_s][fret_status_last_f];
-  uint8_t note = *(accord + l_idx);
+  uint8_t note = *(accord + l_idx) + TUNING;
 #ifdef DBG
   Serial.print(fret_status_last_s);
   Serial.print("n");
@@ -250,13 +254,13 @@ inline void send_stop_tone_event(boolean stop_pressed) {
 
     //find if special function is pressed
     if ((fret_status[0][5] == true)) {
-      preset = 0x19;
+      preset = 0x00;
       midiEventPacket_t special = {0x0C, 0xC0, preset, 0};  //channel, pitch, velocity
       MidiUSB.sendMIDI(special);
       MidiUSB.flush();
     }
     if ((fret_status[1][5] == true)) {
-      preset = 0x1B;
+      preset = 0x08;
       midiEventPacket_t special = {0x0C, 0xC0, preset, 0};  //channel, pitch, velocity
       MidiUSB.sendMIDI(special);
       MidiUSB.flush();
