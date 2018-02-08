@@ -26,5 +26,5 @@ aconnect 20 128
 
 Inspect midi commands
 ```
-aseqdump
+aseqdump -p 20
 ```
