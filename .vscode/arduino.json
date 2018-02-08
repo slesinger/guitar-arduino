@@ -1,0 +1,5 @@
+{
+    "board": "arduino:sam:arduino_due_x_dbg",
+    "sketch": "guitar-arduino.ino",
+    "port": "/dev/ttyACM0"
+}

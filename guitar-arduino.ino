@@ -1,11 +1,10 @@
-#include <Arduino.h>
+// #include <Arduino.h>
 
-#include "guitar_v2.h"
-#include "chords.h"
-#include "profile_default.h"
+#include "src/guitar_v2.h"
+#include "src/chords.h"
+#include "src/profile_default.h"
 #include "MIDIUSB.h" //https://github.com/arduino-libraries/MIDIUSB
 #include "SPI.h"
-#include "PCD8544_SPI.h"
 
 //profiles -> profile (which accords are mapped to fret fields) -> accord (definition of notes)
 /*
@@ -21,8 +20,6 @@ typedef struct
 //MIDI reference https://users.cs.cf.ac.uk/Dave.Marshall/Multimedia/node155.html
 //MIDI reference http://www.gweep.net/~prefect/eng/reference/protocol/midispec.html#Off
 //MIDI message specs https://www.midi.org/specifications/item/table-1-summary-of-midi-message
-
-PCD8544_SPI_FB lcd;
 
 //guitarpack.sf2 has tuning -12
 //accounsting.sf2 has 0
@@ -187,6 +184,12 @@ inline void send_laser_event(boolean laser_blocked, int l_idx) {
 #endif
 
   if (laser_blocked) {
+      midiEventPacket_t packet0 = {0x08, 0x80 | 0, played_notes[l_idx], 0};  //note off last played note
+      MidiUSB.sendMIDI(packet0);
+      MidiUSB.flush();
+  }
+
+  if (!laser_blocked) {
     if (pitch != 0) {
       send_fret_sliding_event(0, 0);  //reset pitch
     }
@@ -335,6 +338,28 @@ inline void laser_common_ISR(int l_idx) {
   }
 }
 
+inline boolean all_lasers_blocked() {
+  if (laser_status[0] == true &&
+      laser_status[1] == true &&
+      laser_status[2] == true &&
+      laser_status[3] == true &&
+      laser_status[4] == true &&
+      laser_status[5] == true
+  )
+    return true;
+  else
+    return false;
+}
+
+inline void set_all_laser_unblocked() {
+  laser_status[0] = false;
+  laser_status[1] = false;
+  laser_status[2] = false;
+  laser_status[3] = false;
+  laser_status[4] = false;
+  laser_status[5] = false;
+}
+
 inline void laser_common_analog(int l_idx, boolean laser_blocked) {
   unsigned long us = micros();
   if (laser_blocked != laser_status[l_idx]) { //ISR invoked but status did not change from current, do not know why ISR is called -> ignore
@@ -342,6 +367,11 @@ inline void laser_common_analog(int l_idx, boolean laser_blocked) {
     if (us > (laser_status_last_update_us[l_idx] + LASER_ANALOG_THOLD_US)) {
 
       laser_status[l_idx] = laser_blocked;
+
+      if (all_lasers_blocked()) {  //detect hand over all lasers, stop sound
+        set_all_laser_unblocked();
+      }
+
       laser_status_last_update_us[l_idx] = us;
       send_laser_event((boolean)laser_blocked, l_idx);
     } //else ignore, change was due to jitter, likely
@@ -406,10 +436,6 @@ void setup()
 #endif
 
   init_default_profile();
-
-  lcd.begin();
-  lcd.print(F("Slesinger"));
-  lcd.renderAll();
 
   //zero fret_status and set frets as source of 3.3V (in scan mode)
   for (int f = 0; f <= 12; f++) {

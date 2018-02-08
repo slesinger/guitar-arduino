@@ -1,7 +1,7 @@
 #ifndef CHORDS_H
 #define CHORDS_H
 
-#include <Arduino.h>
+// #include <Arduino.h>
 #include "guitar_v2.h"
 //                         E  A  D  G  B  Ehi
 uint8_t acc_zero[6]     = {XX,XX,XX,XX,XX,XX};
