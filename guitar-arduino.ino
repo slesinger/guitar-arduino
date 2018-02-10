@@ -311,7 +311,7 @@ inline void send_vibrato_event(int val) {
 
 inline void send_effect_event(int val) { //0-1023
   uint8_t val_norm = map(val, 0, 1023, 0, 127);
-  midiEventPacket_t packet = {0x0B, 0xB0 | 0, MIDI_CONTROL_CHORUS, val_norm};
+  midiEventPacket_t packet = {0x0B, 0xB0 | 0, MIDI_CONTROL_SUSTAIN, val_norm};
   MidiUSB.sendMIDI(packet);
   MidiUSB.flush();
 }

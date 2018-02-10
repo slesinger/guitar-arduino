@@ -4,6 +4,7 @@
 
 #define UNDEF 78
 #define MIDI_CONTROL_CHORUS 0x5D
+#define MIDI_CONTROL_SUSTAIN 0x40
 
 #define XX 130 //string is played but no fret is pressed
 #define ZZ 0  //string is not played
