@@ -235,10 +235,10 @@ inline void send_laser_event(boolean laser_blocked, int l_idx) {
     //noteOn
     uint8_t note = get_note(l_idx);
     if (note != 0) {
-      midiEventPacket_t packet0 = {0x08, 0x80 | 0, played_notes[l_idx], 0};  //note off last played note
-      MidiUSB.sendMIDI(packet0);
-      MidiUSB.flush();
-      delay(2); //next midi command gets omitted if delay is not present, because midiusb is ignoring the fact, just change it
+      //midiEventPacket_t packet0 = {0x08, 0x80 | 0, played_notes[l_idx], 0};  //note off last played note
+      //MidiUSB.sendMIDI(packet0);
+      //MidiUSB.flush();
+      //delay(2); //next midi command gets omitted if delay is not present, because midiusb is ignoring the fact, just change it
       played_notes[l_idx] = note;
       midiEventPacket_t packet = {0x09, 0x90 | 0, note, velocity};  //channel, pitch, velocity
       MidiUSB.sendMIDI(packet);
