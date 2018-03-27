@@ -183,20 +183,19 @@ inline void send_laser_event(boolean laser_blocked, int l_idx) {
   Serial.println(l_idx);
 #endif
 
-  if (laser_blocked) {
-      midiEventPacket_t packet0 = {0x08, 0x80 | 0, played_notes[l_idx], 0};  //note off last played note
+  if (laser_blocked) {  // finger is muting string(laser)
+      midiEventPacket_t packet0 = {0x08, 0x80 | 0, played_notes[l_idx], 0};
       MidiUSB.sendMIDI(packet0);
       MidiUSB.flush();
   }
 
-  if (!laser_blocked) {
+  if (!laser_blocked) {  //finger is releasing string(laser)
     if (pitch != 0) {
       send_fret_sliding_event(0, 0);  //reset pitch
     }
     //calculate velocity
+    unsigned long diff_us = micros() - emphasis_last_blocked_us;
     if (l_idx == 0) {
-      unsigned long diff_us = micros() - emphasis_last_blocked_us;
-
       //out of range - set default velocity because emphasis laser was likely not blocked right before laser 0
       if ( (diff_us < 0) || (diff_us > VEL_TIME_OUT_OF_RANGE) ) {
         velocity = DEFAULT_VELOCITY;
@@ -221,7 +220,6 @@ inline void send_laser_event(boolean laser_blocked, int l_idx) {
       #endif
     }
     else {  //for other laser check if time difference is out of range
-      unsigned long diff_us = micros() - emphasis_last_blocked_us;
       if ( (diff_us < 0) || (diff_us > VEL_TIME_OUT_OF_RANGE) ) {
         velocity = DEFAULT_VELOCITY;
         #ifdef DBG
@@ -255,7 +253,7 @@ inline void send_emphasis_event(boolean emphasis_blocked) {
     Serial.println("e");
 #endif
 
-  if (emphasis_blocked) { //set time stamp start to measure time between emphasis and laser 0 duration for calculation of velocity
+  if (!emphasis_blocked) { //set time stamp start to measure time between emphasis and laser 0 duration for calculation of velocity
     emphasis_last_blocked_us = micros();
   }
 }
