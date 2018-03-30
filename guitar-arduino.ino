@@ -31,6 +31,7 @@ typedef struct
 #define LASER_THOLD 1000 //[us]
 #define STOP_THOLD 500000 //[us]
 #define FRET_SLIDING_THOLD 500000 //[us]
+#define PITCH_HALFTONE 12 * 4
 #define VEL_TIME_OUT_OF_RANGE 200000 //[us]
 #define VEL_TIME_MIN 6000
 #define VEL_TIME_MAX 25000
@@ -116,10 +117,14 @@ uint8_t get_note(int l_idx) {
 //------ handle events --------
 
 inline void send_fret_sliding_event(int dir, int f) {
-  pitch += dir * 10;
+  pitch += dir * PITCH_HALFTONE;
 
-  if (dir == 0)
+  if (dir == 0) {
     pitch = 0;
+  }
+  else {
+    send_vibrato_event(pitch);
+  }
 
 #ifdef DBG
   Serial.print(f);
@@ -144,16 +149,20 @@ inline void send_fret_event(boolean pressed, int s, int f) {
   Serial.println(f * 10 + s);
 #endif
 
-
-/*
   //check for sliding
-  unsigned long diff_us = micros() - fret_status_last_f_us;
-  int dir = f - fret_status_last_used; //0: no sliding, -1:sliding outward: 1: sliding inward
-  if (diff_us < FRET_SLIDING_THOLD) {
-    send_fret_sliding_event(dir, f);
+  if (s ==0) {  //jen pro vybrnkavani
+    unsigned long diff_us = micros() - fret_status_last_f_us;
+    if (diff_us < FRET_SLIDING_THOLD) {
+      int dir = f - fret_status_last_used; //0: no sliding, -1:sliding outward: 1: sliding inward
+      send_fret_sliding_event(dir, f);
+    }
+    else {
+      send_fret_sliding_event(0, f);  //reset pitch    
+    }
+    fret_status_last_used = f;
+    fret_status_last_f_us = micros();
   }
-*/
-  fret_status_last_used = f;
+
   //set status
   if (pressed) {
     fret_status_last_f = f;
@@ -163,14 +172,6 @@ inline void send_fret_event(boolean pressed, int s, int f) {
     fret_status_last_f = UNDEF;
     fret_status_last_s = UNDEF;
   }
-/*
-  //midi fake controller for debuging
-  midiEventPacket_t packet = {0x0B, 0xB0, 0x50, s};
-  MidiUSB.sendMIDI(packet);
-  packet = {0x0B, 0xB0, 0x51, f};
-  MidiUSB.sendMIDI(packet);
-  MidiUSB.flush();
-*/
 }
 
 
@@ -183,12 +184,21 @@ inline void send_laser_event(boolean laser_blocked, int l_idx) {
   Serial.println(l_idx);
 #endif
 
-  if (laser_blocked) {  // finger is muting string(laser)
-      midiEventPacket_t packet0 = {0x08, 0x80 | 0, played_notes[l_idx], 0};
+  bool sp = is_string_pressed_on_active_fret(0);
+  if (laser_blocked && sp) {
+    for (int i = 0; i < 6; i++) { //mute all strings if vybrnkavaci struna is pressed
+      midiEventPacket_t packet0 = {0x08, 0x80 | 0, played_notes[i], 0};
       MidiUSB.sendMIDI(packet0);
       MidiUSB.flush();
+      delay(2);
+    }
   }
-
+  if (laser_blocked && !sp) {  // finger is muting current laser
+    midiEventPacket_t packet0 = {0x08, 0x80 | 0, played_notes[l_idx], 0};
+    MidiUSB.sendMIDI(packet0);
+    MidiUSB.flush();
+    delay(2);
+  }
   if (!laser_blocked) {  //finger is releasing string(laser)
     if (pitch != 0) {
       send_fret_sliding_event(0, 0);  //reset pitch
@@ -233,10 +243,6 @@ inline void send_laser_event(boolean laser_blocked, int l_idx) {
     //noteOn
     uint8_t note = get_note(l_idx);
     if (note != 0) {
-      //midiEventPacket_t packet0 = {0x08, 0x80 | 0, played_notes[l_idx], 0};  //note off last played note
-      //MidiUSB.sendMIDI(packet0);
-      //MidiUSB.flush();
-      //delay(2); //next midi command gets omitted if delay is not present, because midiusb is ignoring the fact, just change it
       played_notes[l_idx] = note;
       midiEventPacket_t packet = {0x09, 0x90 | 0, note, velocity};  //channel, pitch, velocity
       MidiUSB.sendMIDI(packet);
@@ -258,8 +264,9 @@ inline void send_emphasis_event(boolean emphasis_blocked) {
   }
 }
 
-inline void send_stop_tone_event(boolean stop_pressed) {
+inline void send_stop_tone_event(boolean stop_pressed, boolean skip_setup) {
 
+  if (!skip_setup) {
     //find if instrument selection is pressed (top string), fret selects instrument
     for (int i = 0; i < 13; i++) {
       if ((fret_status[i][5] == true)) {
@@ -275,6 +282,7 @@ inline void send_stop_tone_event(boolean stop_pressed) {
         selected_capo_id = (i < 8) ? i + 1 : 0;  //frets 9 and more removes capo
       }
     }
+  }
 
   if (stop_pressed) {
     //noteOff for all lasers
@@ -368,6 +376,7 @@ inline void laser_common_analog(int l_idx, boolean laser_blocked) {
 
       if (all_lasers_blocked()) {  //detect hand over all lasers, stop sound
         set_all_laser_unblocked();
+        send_stop_tone_event(true, true);
       }
 
       laser_status_last_update_us[l_idx] = us;
@@ -409,7 +418,7 @@ void stop_ISR()   {
   if (stop == LOW) { //confirm the actual value on pin
     unsigned long us = micros();
     if (us > (stop_status_last_update_us + STOP_THOLD)) {
-      send_stop_tone_event(true);
+      send_stop_tone_event(true, false);
       stop_status_last_update_us = us;
     }
   }
