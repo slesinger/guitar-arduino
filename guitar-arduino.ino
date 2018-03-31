@@ -183,7 +183,7 @@ inline void send_laser_event(boolean laser_blocked, int l_idx) {
 #endif
 
   if (laser_blocked) {
-    int s0p = 1;
+    int s0p = 0;
     for (int fr = 0; fr < NO_FRETS; fr++) {
       s0p += (fret_status[fr][0]) ? 1 : 0;
     }
@@ -505,7 +505,6 @@ void loop()
         break;
     }
   }
-
 
   //read analog emphasis
   boolean blocked = false;
