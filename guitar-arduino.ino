@@ -40,10 +40,11 @@ typedef struct
 #define VELOCITY_MIN 74 //bylo 80
 #define EFFECT_THOLD_MS 5000 //[ms] how often to effect setting
 #define VIBRATO_THOLD_MS 5 //[ms] how often send vibrato events, real event sent only if not 0
+#define NO_FRETS 13
 //#define DBG 1
 //#define DBG2 1
 
-int fret_pins[13] = {47,43,25,41,27,23,35,37,45,29,31,33,39};
+int fret_pins[NO_FRETS] = {47,43,25,41,27,23,35,37,45,29,31,33,39};
 int string_pins[6]= {32,30,28,26,24,22};
 int laser_pins[6] = {A0,A2,A4,A3,A6,A5};  //bpw34 photodiode
 int emphasis_pin  = A1;
@@ -52,7 +53,7 @@ int vibrato_pin = A9;
 int effect_pin = A8;
 uint8_t pitch = 0;
 
-boolean fret_status[13][6];
+boolean fret_status[NO_FRETS][6];
 int fret_status_last_f = UNDEF;
 int fret_status_last_used = UNDEF;
 unsigned long fret_status_last_f_us = 0;
@@ -150,17 +151,14 @@ inline void send_fret_event(boolean pressed, int s, int f) {
 #endif
 
   //check for sliding
-  if (s ==0) {  //jen pro vybrnkavani
+  if (s ==0 ) {  //jen pro vybrnkavani
     unsigned long diff_us = micros() - fret_status_last_f_us;
     if (diff_us < FRET_SLIDING_THOLD) {
       int dir = f - fret_status_last_used; //0: no sliding, -1:sliding outward: 1: sliding inward
       send_fret_sliding_event(dir, f);
+      fret_status_last_used = f;
+      fret_status_last_f_us = micros();
     }
-    else {
-      send_fret_sliding_event(0, f);  //reset pitch    
-    }
-    fret_status_last_used = f;
-    fret_status_last_f_us = micros();
   }
 
   //set status
@@ -184,21 +182,27 @@ inline void send_laser_event(boolean laser_blocked, int l_idx) {
   Serial.println(l_idx);
 #endif
 
-  bool sp = is_string_pressed_on_active_fret(0);
-  if (laser_blocked && sp) {
-    for (int i = 0; i < 6; i++) { //mute all strings if vybrnkavaci struna is pressed
-      midiEventPacket_t packet0 = {0x08, 0x80 | 0, played_notes[i], 0};
+  if (laser_blocked) {
+    int s0p = 1;
+    for (int fr = 0; fr < NO_FRETS; fr++) {
+      s0p += (fret_status[fr][0]) ? 1 : 0;
+    }
+    if (s0p > 0) {
+      for (int i = 0; i < 6; i++) { //mute all strings if vybrnkavaci struna is pressed
+        midiEventPacket_t packet0 = {0x08, 0x80 | 0, played_notes[i], 0};
+        MidiUSB.sendMIDI(packet0);
+        MidiUSB.flush();
+        delay(2);
+      }
+    }
+    if (s0p == 0) {  // finger is muting current laser
+      midiEventPacket_t packet0 = {0x08, 0x80 | 0, played_notes[l_idx], 0};
       MidiUSB.sendMIDI(packet0);
       MidiUSB.flush();
       delay(2);
     }
-  }
-  if (laser_blocked && !sp) {  // finger is muting current laser
-    midiEventPacket_t packet0 = {0x08, 0x80 | 0, played_notes[l_idx], 0};
-    MidiUSB.sendMIDI(packet0);
-    MidiUSB.flush();
-    delay(2);
-  }
+  }  //end of laser_blocked
+
   if (!laser_blocked) {  //finger is releasing string(laser)
     if (pitch != 0) {
       send_fret_sliding_event(0, 0);  //reset pitch
@@ -268,7 +272,7 @@ inline void send_stop_tone_event(boolean stop_pressed, boolean skip_setup) {
 
   if (!skip_setup) {
     //find if instrument selection is pressed (top string), fret selects instrument
-    for (int i = 0; i < 13; i++) {
+    for (int i = 0; i < NO_FRETS; i++) {
       if ((fret_status[i][5] == true)) {
         midiEventPacket_t special = {0x0C, 0xC0, instruments[i], 0};
         MidiUSB.sendMIDI(special);
@@ -277,7 +281,7 @@ inline void send_stop_tone_event(boolean stop_pressed, boolean skip_setup) {
     }
 
     //find if capo selection is requested (bottom string), max 8th fret, 9-13 fret means remove capo
-    for (int i = 0; i < 13; i++) {
+    for (int i = 0; i < NO_FRETS; i++) {
       if ((fret_status[i][0] == true)) {
         selected_capo_id = (i < 8) ? i + 1 : 0;  //frets 9 and more removes capo
       }
@@ -463,18 +467,8 @@ void setup()
     laser_status[l] = 0;
     laser_status_last_update_us[l] = 0;
     last_alaser_status[l] = false;
-//    pinMode(laser_pins[l], INPUT);  //neni treba pro analog read
   }
 
-//  attachInterrupt(digitalPinToInterrupt(laser_pins[0]), laser0_ISR, RISING);
-//  attachInterrupt(digitalPinToInterrupt(laser_pins[1]), laser1_ISR, CHANGE);  //there is some HW difference, does not jitter that much
-//  attachInterrupt(digitalPinToInterrupt(laser_pins[2]), laser2_ISR, RISING);
-//  attachInterrupt(digitalPinToInterrupt(laser_pins[3]), laser3_ISR, RISING);
-//  attachInterrupt(digitalPinToInterrupt(laser_pins[4]), laser4_ISR, RISING);
-//  attachInterrupt(digitalPinToInterrupt(laser_pins[5]), laser5_ISR, RISING);
-
-//  pinMode(emphasis_pin, INPUT);  //neni treba pro analog read
-//  attachInterrupt(digitalPinToInterrupt(emphasis_pin), laseremphasis_ISR, RISING);
   last_alaser_status[6] = false;  //emhasis
 
   //init input pins with internal pullup resistors
@@ -490,7 +484,7 @@ void loop()
 {
   bool narazil_na_prst = false;
   //scan fret by fret
-  for (int f = 0; f <= 12; f++) { //f<=12
+  for (int f = 0; f <= (NO_FRETS-1); f++) { //f<=12
 
     set_fret(f);
     //scan strings for this fret
