@@ -31,7 +31,7 @@ typedef struct
 #define LASER_THOLD 1000 //[us]
 #define STOP_THOLD 500000 //[us]
 #define FRET_SLIDING_THOLD 500000 //[us]
-#define PITCH_HALFTONE 12 * 4
+#define PITCH_HALFTONE 5
 #define VEL_TIME_OUT_OF_RANGE 200000 //[us]
 #define VEL_TIME_MIN 6000
 #define VEL_TIME_MAX 25000
@@ -55,7 +55,7 @@ uint8_t pitch = 0;
 
 boolean fret_status[NO_FRETS][6];
 int fret_status_last_f = UNDEF;
-int fret_status_last_used = UNDEF;
+int frets0_when_noteon = UNDEF;
 unsigned long fret_status_last_f_us = 0;
 int fret_status_last_s = UNDEF;
 
@@ -85,6 +85,13 @@ inline boolean is_string_pressed_on_active_fret(int s_idx) {
   return digitalRead(string_pins[s_idx]);
 }
 
+void send_midi_debug(uint8_t v1, uint8_t v2) {
+  midiEventPacket_t packet0 = {0x09, 0x90 | 1, v1, v2};
+  MidiUSB.sendMIDI(packet0);
+  MidiUSB.flush();
+  delay(2);
+}
+
 uint8_t get_note(int l_idx) {
   //TODO switch to profile pointer to allow profile switching
   //accord is of type uint8_t[6]
@@ -98,67 +105,31 @@ uint8_t get_note(int l_idx) {
   else {
     note = note + TUNING; //note not affected by capo, just proceed
   }
-#ifdef DBG
-  Serial.print(fret_status_last_s);
-  Serial.print("n");
-  Serial.println(fret_status_last_f);
-#endif
-#ifdef DBG2
-  Serial.print(l_idx);
-  Serial.print(" ");
-  Serial.print(fret_status_last_s);
-  Serial.print(" ");
-  Serial.print(fret_status_last_f);
-  Serial.print(" ");
-  Serial.println(note);
-#endif
   return note;
 }
 
 //------ handle events --------
 
-inline void send_fret_sliding_event(int dir, int f) {
-  pitch += dir * PITCH_HALFTONE;
+inline void send_fret_sliding_event(int delta, int f) {
+  pitch = delta * PITCH_HALFTONE;
 
-  if (dir == 0) {
-    pitch = 0;
-  }
-  else {
+  if (delta != 0) {
     send_vibrato_event(pitch);
   }
-
-#ifdef DBG
-  Serial.print(f);
-  if (dir > 0)
-    Serial.print(">");
-  else
-    Serial.print("<");
-  Serial.print(dir);
-  Serial.print("|");
-  Serial.println(pitch);
-#endif
-
 }
 
 
 inline void send_fret_event(boolean pressed, int s, int f) {
-#ifdef DBG
-  if (pressed)
-    Serial.print("F");
-  else
-    Serial.print("f");
-  Serial.println(f * 10 + s);
-#endif
 
   //check for sliding
-  if (s ==0 ) {  //jen pro vybrnkavani
+  if ( pressed && (s == 0) ) {  //jen pro vybrnkavani
     unsigned long diff_us = micros() - fret_status_last_f_us;
     if (diff_us < FRET_SLIDING_THOLD) {
-      int dir = f - fret_status_last_used; //0: no sliding, -1:sliding outward: 1: sliding inward
-      send_fret_sliding_event(dir, f);
-      fret_status_last_used = f;
-      fret_status_last_f_us = micros();
+      int delta = f - ( (frets0_when_noteon != UNDEF) ? frets0_when_noteon : 0 ); //0: no sliding, -1:sliding outward: 1: sliding inward
+      // send_midi_debug(delta, frets0_when_noteon);
+      send_fret_sliding_event(delta, f);
     }
+    fret_status_last_f_us = micros();
   }
 
   //set status
@@ -174,14 +145,8 @@ inline void send_fret_event(boolean pressed, int s, int f) {
 
 
 inline void send_laser_event(boolean laser_blocked, int l_idx) {
-#ifdef DBG
-  if (laser_blocked)
-    Serial.print("L");
-  else
-    Serial.print("l");
-  Serial.println(l_idx);
-#endif
 
+  // Mute strings
   if (laser_blocked) {
     int s0p = 0;
     for (int fr = 0; fr < NO_FRETS; fr++) {
@@ -203,8 +168,10 @@ inline void send_laser_event(boolean laser_blocked, int l_idx) {
     }
   }  //end of laser_blocked
 
+  // Play strings
   if (!laser_blocked) {  //finger is releasing string(laser)
     if (pitch != 0) {
+      pitch = 0;
       send_fret_sliding_event(0, 0);  //reset pitch
     }
     //calculate velocity
@@ -227,26 +194,17 @@ inline void send_laser_event(boolean laser_blocked, int l_idx) {
           }
         }
       }
-      #ifdef DBG
-        Serial.print(diff_us);
-        Serial.print(">");
-        Serial.println(velocity);
-      #endif
     }
     else {  //for other laser check if time difference is out of range
       if ( (diff_us < 0) || (diff_us > VEL_TIME_OUT_OF_RANGE) ) {
         velocity = DEFAULT_VELOCITY;
-        #ifdef DBG
-          Serial.print(diff_us);
-          Serial.print("]");
-          Serial.println(velocity);
-        #endif
       }
     } //end of calculate velocity
 
     //noteOn
     uint8_t note = get_note(l_idx);
     if (note != 0) {
+      frets0_when_noteon = fret_status_last_f;
       played_notes[l_idx] = note;
       midiEventPacket_t packet = {0x09, 0x90 | 0, note, velocity};  //channel, pitch, velocity
       MidiUSB.sendMIDI(packet);
@@ -256,13 +214,6 @@ inline void send_laser_event(boolean laser_blocked, int l_idx) {
 }
 
 inline void send_emphasis_event(boolean emphasis_blocked) {
-#ifdef DBG
-  if (emphasis_blocked)
-    Serial.println("E");
-  else
-    Serial.println("e");
-#endif
-
   if (!emphasis_blocked) { //set time stamp start to measure time between emphasis and laser 0 duration for calculation of velocity
     emphasis_last_blocked_us = micros();
   }
@@ -328,12 +279,6 @@ inline void send_effect_event(int val) { //0-1023
 
 // ---- ISR handling -----
 inline void laser_common_ISR(int l_idx) {
-  /*Serial.print(digitalRead(laser_pins[0]));
-  Serial.print(digitalRead(laser_pins[1]));
-  Serial.print(digitalRead(laser_pins[2]));
-  Serial.print(digitalRead(laser_pins[3]));
-  Serial.print(digitalRead(laser_pins[4]));
-  Serial.println(digitalRead(laser_pins[5]));*/
   unsigned long us = micros();
   int laser_blocked = digitalRead(laser_pins[l_idx]); //LOW for laser radiates, HIGH laser blocked
 
@@ -428,6 +373,7 @@ void stop_ISR()   {
   }
 }
 
+// TODO je toto potreba na analog?
 void laser0_ISR()   { laser_common_ISR(0); }
 void laser1_ISR()   { laser_common_ISR(1); }
 void laser2_ISR()   { laser_common_ISR(2); }
@@ -436,15 +382,7 @@ void laser4_ISR()   { laser_common_ISR(4); }
 void laser5_ISR()   { laser_common_ISR(5); }
 
 //-------------------------
-void setup()
-{
-#ifdef DBG
-  Serial.begin(115200);
-  Serial.println("Starting guitar_v2");
-#endif
-#ifdef DBG2
-  Serial.begin(115200);
-#endif
+void setup() {
 
   init_default_profile();
 
