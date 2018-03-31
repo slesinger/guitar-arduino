@@ -31,7 +31,7 @@ typedef struct
 #define LASER_THOLD 1000 //[us]
 #define STOP_THOLD 500000 //[us]
 #define FRET_SLIDING_THOLD 500000 //[us]
-#define PITCH_HALFTONE 5
+#define PITCH_HALFTONE 800
 #define VEL_TIME_OUT_OF_RANGE 200000 //[us]
 #define VEL_TIME_MIN 6000
 #define VEL_TIME_MAX 25000
@@ -111,10 +111,8 @@ uint8_t get_note(int l_idx) {
 //------ handle events --------
 
 inline void send_fret_sliding_event(int delta, int f) {
-  pitch = delta * PITCH_HALFTONE;
-
   if (delta != 0) {
-    send_vibrato_event(pitch);
+    send_pitch_event(delta * PITCH_HALFTONE);  //-4096 <> 4096
   }
 }
 
@@ -126,7 +124,7 @@ inline void send_fret_event(boolean pressed, int s, int f) {
     unsigned long diff_us = micros() - fret_status_last_f_us;
     if (diff_us < FRET_SLIDING_THOLD) {
       int delta = f - ( (frets0_when_noteon != UNDEF) ? frets0_when_noteon : 0 ); //0: no sliding, -1:sliding outward: 1: sliding inward
-      // send_midi_debug(delta, frets0_when_noteon);
+      send_midi_debug(delta +100, frets0_when_noteon);
       send_fret_sliding_event(delta, f);
     }
     fret_status_last_f_us = micros();
@@ -267,7 +265,16 @@ inline void send_vibrato_event(int val) {
   midiEventPacket_t packet = {0x0E, 0xE0 | 0, val_lsb, val_msb};
   MidiUSB.sendMIDI(packet);
   MidiUSB.flush();
+}
 
+//val <-4096; 4096>
+inline void send_pitch_event(int val) {
+  unsigned int val2 = 8192 + val;
+  uint8_t val_lsb = val2 & 0x7F;
+  uint8_t val_msb = val2 >> 7;
+  midiEventPacket_t packet = {0x0E, 0xE0 | 0, val_lsb, val_msb};
+  MidiUSB.sendMIDI(packet);
+  MidiUSB.flush();
 }
 
 inline void send_effect_event(int val) { //0-1023
