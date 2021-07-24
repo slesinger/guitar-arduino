@@ -26,8 +26,9 @@ typedef struct
 #define TUNING -12
 
 
-#define LASER_ANALOG_TH 900 //for analog read of bpw34. 900-1023 means laser is blocked, 0-600 means laser hit diode
-#define LASER_ANALOG_THOLD_US 5000 //[us]
+#define LASER_ANALOG_TH 975 //for analog read of bpw34. 900-1023 means laser is blocked, 0-600 means laser hit diode
+#define LASER_ANALOG_THOLD_US 5000 //[us] fastest accepted laser state change to prevent noise, fast strum may not be accepted 
+//off topic: measured fastest cadence of strumming is 120ms(120000us)
 #define LASER_THOLD 1000 //[us]
 #define STOP_THOLD 500000 //[us]
 #define FRET_SLIDING_THOLD 500000 //[us]
@@ -285,6 +286,7 @@ inline void send_effect_event(int val) { //0-1023
 }
 
 // ---- ISR handling -----
+/*
 inline void laser_common_ISR(int l_idx) {
   unsigned long us = micros();
   int laser_blocked = digitalRead(laser_pins[l_idx]); //LOW for laser radiates, HIGH laser blocked
@@ -299,7 +301,7 @@ inline void laser_common_ISR(int l_idx) {
 
   }
 }
-
+*/
 inline boolean all_lasers_blocked() {
   if (laser_status[0] == true &&
       laser_status[1] == true &&
@@ -381,12 +383,12 @@ void stop_ISR()   {
 }
 
 // TODO je toto potreba na analog?
-void laser0_ISR()   { laser_common_ISR(0); }
-void laser1_ISR()   { laser_common_ISR(1); }
-void laser2_ISR()   { laser_common_ISR(2); }
-void laser3_ISR()   { laser_common_ISR(3); }
-void laser4_ISR()   { laser_common_ISR(4); }
-void laser5_ISR()   { laser_common_ISR(5); }
+//void laser0_ISR()   { laser_common_ISR(0); }
+//void laser1_ISR()   { laser_common_ISR(1); }
+//void laser2_ISR()   { laser_common_ISR(2); }
+//void laser3_ISR()   { laser_common_ISR(3); }
+//void laser4_ISR()   { laser_common_ISR(4); }
+//void laser5_ISR()   { laser_common_ISR(5); }
 
 //-------------------------
 void setup() {
