@@ -26,7 +26,8 @@ typedef struct
 #define TUNING -12
 
 
-const int LASER_ANALOG_TH[] = {960, 920, 975, 711, 900, 975}; //for analog read of bpw34. 900-1023 means laser is blocked, 0-600 means laser hit diode
+//const int LASER_ANALOG_TH[] = {960, 920, 975, 711, 900, 975}; //for analog read of bpw34. 900-1023 means laser is blocked, 0-600 means laser hit diode
+int LASER_ANALOG_TH[] = {1024, 1024, 1024, 1024, 1024, 1024}; //for analog read of bpw34. 900-1023 means laser is blocked, 0-600 means laser hit diode
 #define LASER_ANALOG_EMPH 975 //for analog read of bpw34. 900-1023 means laser is blocked, 0-600 means laser hit diode
 #define LASER_ANALOG_THOLD_US 500 //[us] fastest accepted laser state change to prevent noise, fast strum may not be accepted 
 //off topic: measured fastest cadence of strumming is 120ms(120000us)
@@ -492,9 +493,15 @@ void loop()
 //    send_midi_debug(i, (int)((float)a / 8));
 //    delay(100);
 //    }
-    if (a > LASER_ANALOG_TH[i])
+    if (a > LASER_ANALOG_TH[i]+5)
       blocked = true;
-
+    else {
+      int delta = (int)((a - LASER_ANALOG_TH[i]) / 2);
+      if (delta < -4) delta = -4;
+      if (delta > 4) delta = 4;
+      LASER_ANALOG_TH[i] += delta; //update level of laser sensors dynamically
+    }
+      
     if (last_alaser_status[i] != blocked) { //status changed
 //      send_midi_debug(i, (int)((float)a / 8));
       last_alaser_status[i] = blocked;
