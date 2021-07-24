@@ -423,7 +423,7 @@ void setup() {
   //init input pins with internal pullup resistors
   pinMode(stop_tone_pin, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(stop_tone_pin), stop_ISR, FALLING);
-
+  delay(1000); //because analogRead returns strange values at start
 }
 
 
@@ -489,8 +489,9 @@ void loop()
     boolean blocked = false;
 
     int a = analogRead(laser_pins[i]);
-//    if (i==3){
+//    if (i==1){
 //    send_midi_debug(i, (int)((float)a / 8));
+//    send_midi_debug(i, (int)((float)LASER_ANALOG_TH[i] / 8));
 //    delay(100);
 //    }
     if (a > LASER_ANALOG_TH[i]+5)
