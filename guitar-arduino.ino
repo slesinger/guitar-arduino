@@ -26,8 +26,9 @@ typedef struct
 #define TUNING -12
 
 
-#define LASER_ANALOG_TH 975 //for analog read of bpw34. 900-1023 means laser is blocked, 0-600 means laser hit diode
-#define LASER_ANALOG_THOLD_US 5000 //[us] fastest accepted laser state change to prevent noise, fast strum may not be accepted 
+const int LASER_ANALOG_TH[] = {960, 920, 975, 711, 900, 975}; //for analog read of bpw34. 900-1023 means laser is blocked, 0-600 means laser hit diode
+#define LASER_ANALOG_EMPH 975 //for analog read of bpw34. 900-1023 means laser is blocked, 0-600 means laser hit diode
+#define LASER_ANALOG_THOLD_US 500 //[us] fastest accepted laser state change to prevent noise, fast strum may not be accepted 
 //off topic: measured fastest cadence of strumming is 120ms(120000us)
 #define LASER_THOLD 1000 //[us]
 #define STOP_THOLD 500000 //[us]
@@ -326,9 +327,10 @@ inline void set_all_laser_unblocked() {
 
 inline void laser_common_analog(int l_idx, boolean laser_blocked) {
   unsigned long us = micros();
-  if (laser_blocked != laser_status[l_idx]) { //ISR invoked but status did not change from current, do not know why ISR is called -> ignore
+//  if (laser_blocked != laser_status[l_idx]) { //ISR invoked but status did not change from current, do not know why ISR is called -> ignore
 
     if (us > (laser_status_last_update_us[l_idx] + LASER_ANALOG_THOLD_US)) {
+      laser_status_last_update_us[l_idx] = us;
 
       laser_status[l_idx] = laser_blocked;
 
@@ -337,11 +339,10 @@ inline void laser_common_analog(int l_idx, boolean laser_blocked) {
         send_stop_tone_event(true, true);
       }
 
-      laser_status_last_update_us[l_idx] = us;
       send_laser_event((boolean)laser_blocked, l_idx);
     } //else ignore, change was due to jitter, likely
 
-  }
+//  }
 }
 
 void laseremphasis_ISR()   {
@@ -429,6 +430,26 @@ void setup() {
 //-------------------------
 void loop()
 {
+
+/* Debugging laser transistor levels
+      int a = analogRead(laser_pins[0]);
+      send_midi_debug(0, (int)((float)a / 8));
+      a = analogRead(laser_pins[1]);
+      send_midi_debug(1, (int)((float)a / 8));
+      a = analogRead(laser_pins[2]);
+      send_midi_debug(2, (int)((float)a / 8));
+      delay(200);
+      a = analogRead(laser_pins[3]);
+      send_midi_debug(3, (int)((float)a / 8));
+      a = analogRead(laser_pins[4]);
+      send_midi_debug(4, (int)((float)a / 8));
+      a = analogRead(laser_pins[5]);
+      send_midi_debug(5, (int)((float)a / 8));
+      delay(200);
+      return;
+*/
+
+  
   bool narazil_na_prst = false;
   //scan fret by fret
   for (int f = 0; f <= (NO_FRETS-1); f++) { //f<=12
@@ -455,7 +476,7 @@ void loop()
 
   //read analog emphasis
   boolean blocked = false;
-  if (analogRead(emphasis_pin) > LASER_ANALOG_TH)
+  if (analogRead(emphasis_pin) > LASER_ANALOG_EMPH)
     blocked = true;
   if (last_alaser_status[6] != blocked) { //status changed
     last_alaser_status[6] = blocked;
@@ -465,10 +486,17 @@ void loop()
   //read lasers
   for (int i = 0; i < 6; i++) {
     boolean blocked = false;
-    if (analogRead(laser_pins[i]) > LASER_ANALOG_TH)
+
+    int a = analogRead(laser_pins[i]);
+//    if (i==3){
+//    send_midi_debug(i, (int)((float)a / 8));
+//    delay(100);
+//    }
+    if (a > LASER_ANALOG_TH[i])
       blocked = true;
 
     if (last_alaser_status[i] != blocked) { //status changed
+//      send_midi_debug(i, (int)((float)a / 8));
       last_alaser_status[i] = blocked;
       laser_common_analog(i, blocked);
     }
