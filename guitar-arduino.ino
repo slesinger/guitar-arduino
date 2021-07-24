@@ -497,8 +497,8 @@ void loop()
       blocked = true;
     else {
       int delta = (int)((a - LASER_ANALOG_TH[i]) / 2);
-      if (delta < -4) delta = -4;
-      if (delta > 4) delta = 4;
+      if (delta < -1) delta = -1;
+      if (delta > 1) delta = 1;
       LASER_ANALOG_TH[i] += delta; //update level of laser sensors dynamically
     }
       
